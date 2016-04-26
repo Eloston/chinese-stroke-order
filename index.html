@@ -1,0 +1,111 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chinese Stroke Order Lookup</title>
+<style>
+    #character_input {
+        width: 100%;
+        font-size: 2em;
+        margin-bottom: 0.25em;
+    }
+    #status {
+        padding-top: 0;
+        padding-bottom: 0.5em;
+        font-size: 1.5em;
+    }
+    #diagrams {
+        display: inline-flex;
+        align-items: stretch;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    .diagramentry {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
+        flex-direction: column;
+        margin: 0.5em 0.5em 0.5em 0.5em;
+        padding: 0.5em 0.5em 0.5em 0.5em;
+        box-shadow: 0.1em 0.1em 0.3em #888888;
+        border: 0.01em solid black;
+    }
+    .nodiagram {
+        font-size: 3em;
+    }
+    img {
+        font-size: 3em;
+    }
+</style>
+<script>
+var visualmandarin_index = new Object();
+
+function generate_element_for_character(character) {
+    var div_elem = document.createElement("div");
+    div_elem.setAttribute("character", character);
+    div_elem.classList.add("diagramentry");
+    if (visualmandarin_index.hasOwnProperty(character)) {
+        var img_elem = document.createElement("img");
+        img_elem.src = visualmandarin_index[character];
+        img_elem.alt = character + " diagram";
+        div_elem.appendChild(img_elem);
+    } else {
+        var message_div = document.createElement("div");
+        message_div.appendChild(document.createTextNode("No stroke diagram for:"))
+        div_elem.appendChild(message_div);
+        var sub_div_elem = document.createElement("div");
+        sub_div_elem.classList.add("nodiagram");
+        sub_div_elem.appendChild(document.createTextNode(character))
+        div_elem.appendChild(sub_div_elem);
+    }
+    return div_elem;
+}
+
+function get_visualmandarin_index() {
+    var xmlhttp = new XMLHttpRequest();
+
+    xmlhttp.addEventListener("loadend", function() {
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+            window.visualmandarin_index = JSON.parse(xmlhttp.responseText);
+            document.getElementById("character_input").removeAttribute("disabled");
+            document.body.removeChild(document.getElementById("status"));
+            if (document.getElementById("character_input").value.length > 0) {
+                document.getElementById("character_input").dispatchEvent(new Event("input"));
+            }
+        } else {
+            document.getElementById("status").innerHTML="Error retrieving character index: " + xmlhttp.status.toString() + " - " + xmlhttp.statusText.toString();
+            console.log(xmlhttp);
+        }
+    });
+    xmlhttp.open("GET", "visualmandarin_index.json", true);
+    xmlhttp.send();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById("character_input").addEventListener("input", function() {
+        var diagrams_elem = document.getElementById("diagrams");
+        var input_value = document.getElementById("character_input").value;
+        var input_initial_length = input_value.length;
+        var diagrams_initial_length = diagrams_elem.children.length;
+        for (i = 0; i < Math.max(input_initial_length, diagrams_initial_length); i++) {
+            if (i > input_initial_length - 1 && i < diagrams_elem.children.length) {
+                diagrams_elem.removeChild(diagrams_elem.children[i]);
+                i--;
+            } else if (i > diagrams_initial_length - 1) {
+                diagrams_elem.appendChild(generate_element_for_character(input_value[i]));
+            } else if (i < diagrams_elem.children.length && diagrams_elem.children[i].getAttribute("character") != input_value[i]) {
+                diagrams_elem.replaceChild(generate_element_for_character(input_value[i]), diagrams_elem.children[i]);
+            }
+        }
+    });
+});
+
+get_visualmandarin_index();
+</script>
+</head>
+<body>
+<div id="status">Loading...</div>
+<input id="character_input" type="text" placeholder="Input 汉字 here" disabled="disabled"></input>
+<div id="diagrams"></div>
+</body>
+</html>
