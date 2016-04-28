@@ -8,6 +8,9 @@
         font-size: 2em;
         margin-bottom: 0.25em;
     }
+    #char_selector {
+        font-size: 2em;
+    }
     #status {
         padding-top: 0;
         padding-bottom: 0.5em;
@@ -36,6 +39,60 @@
     img {
         font-size: 3em;
     }
+    /* Character selector */
+    .char_button {
+        display: inline-block;
+        margin: 0 1em 0 0;
+    }
+    li > label {
+        display: flex;
+        background-color: #666;
+        padding: 0.3em 0.3em 0.3em 1.75em;
+        margin: 0 0 0 0;
+        color: white;
+    }
+    li > label:hover {
+        background-color: #AAA;
+    }
+    li {
+        margin: 0 0 0 1em;
+        padding: 0.5em 0 0 0;
+    }
+    ol {
+        display: flex;
+        align-items: flex-start;
+        flex-direction: column;
+        list-style-type: none;
+        margin: 0 0 0 0;
+        padding: 0 0 0 0;
+    }
+    input[type=checkbox] {
+        display: none;
+    }
+    input[type=checkbox] ~ ol {
+        display: none;
+        visibility: hidden;
+    }
+    input[type=checkbox]:checked ~ ol {
+        display: inherit;
+        visibility: inherit;
+    }
+    input[type=checkbox] + label:before {
+        transform-origin: 25% 50%;
+        border: 0.5em solid transparent;
+        border-width: 0.5em 0.75em;
+        border-left-color: white;
+        margin-left: -1.25em;
+        width: 0;
+        height: 0;
+        text-align: center;
+        content: '';
+        color: #FFF;
+        margin-top: 0.06em;
+    }
+    input[type=checkbox]:checked + label:before {
+        transform: rotate(90deg);
+    }
 </style>
 <script>
 var visualmandarin_index = new Object();
@@ -44,7 +101,7 @@ function generate_element_for_character(character) {
     var div_elem = document.createElement("div");
     div_elem.setAttribute("character", character);
     div_elem.classList.add("diagramentry");
-    if (visualmandarin_index.hasOwnProperty(character)) {
+    if (character in visualmandarin_index) {
         var img_elem = document.createElement("img");
         img_elem.src = visualmandarin_index[character];
         img_elem.alt = character + " diagram";
@@ -73,11 +130,121 @@ function get_visualmandarin_index() {
                 document.getElementById("character_input").dispatchEvent(new Event("input"));
             }
         } else {
-            document.getElementById("status").innerHTML="Error retrieving character index: " + xmlhttp.status.toString() + " - " + xmlhttp.statusText.toString();
             console.log(xmlhttp);
+            document.getElementById("status").innerHTML="Error retrieving char index: " + xmlhttp.status.toString() + " - " + xmlhttp.statusText.toString();
         }
     });
     xmlhttp.open("GET", "visualmandarin_index.json", true);
+    xmlhttp.send();
+}
+
+function display_char_selection(char_selection) {
+    var char_selector_elem = document.getElementById("char_selector");
+    var current_elem = char_selector_elem;
+    var id_count = 0;
+
+    var unexplored = new Array();
+    var node_path = new Array();
+    var node = char_selection;
+    while (unexplored.length > 0 || (node != undefined)) {
+        if (node == undefined) {
+            // Hit the end of the level; explore another branch
+            node_path = unexplored.pop();
+            node = char_selection;
+            for (i = 0; i < node_path.length; i++) {
+                node = node[Object.keys(node).sort()[node_path[i]]];
+            }
+            current_elem = current_elem.parentElement.parentElement;
+        } else {
+            // Add HTML elements for current node
+            var current_node = char_selection;
+            var node_label = "Character Selector";
+            for (i = 0; i < node_path.length; i++) {
+                node_label = Object.keys(current_node).sort()[node_path[i]];
+                current_node = current_node[node_label];
+            }
+            // add element with node_label
+            var middle_li_elem = document.createElement("li");
+            current_elem.appendChild(middle_li_elem);
+            var middle_input_elem = document.createElement("input");
+            middle_input_elem.type = "checkbox";
+            middle_input_elem.id = "cb" + id_count.toString();
+            id_count++;
+            middle_li_elem.appendChild(middle_input_elem);
+            var middle_label_elem = document.createElement("label");
+            middle_label_elem.setAttribute("for", middle_input_elem.id);
+            middle_label_elem.appendChild(document.createTextNode(node_label));
+            middle_li_elem.appendChild(middle_label_elem);
+            var middle_ol_elem = document.createElement("ol");
+            middle_li_elem.appendChild(middle_ol_elem);
+            current_elem = middle_ol_elem;
+            if (node instanceof Array) {
+                for (i = 0; i < node.length; i++) {
+                    var node_label = node[i];
+                    var node_chars = node[i];
+                    if (node[i][0] == "*") {
+                        node_label = document.createElement("u");
+                        node_chars = node[i].slice(1);
+                        node_label.appendChild(document.createTextNode(node_chars));
+                    } else {
+                        node_label = document.createTextNode(node_chars);
+                    }
+                    // add element with node_label
+                    var leaf_elem = document.createElement("span");
+                    leaf_elem.appendChild(node_label);
+                    leaf_elem.setAttribute("character", node[i]);
+                    leaf_elem.classList.add("char_button");
+                    leaf_elem.addEventListener("click", (function(node_chars, e) {
+                        document.getElementById("character_input").value += node_chars;
+                        document.getElementById("character_input").dispatchEvent(new Event("input"));
+                    }).bind(window, node_chars));
+                    current_elem.appendChild(leaf_elem);
+                }
+            }
+
+            // Compute and add adjacent node if it exists
+            if (node_path.length > 0) {
+                var adjacent_node_path = new Array();
+                var adjacent_node = char_selection;
+                for (i = 0; i < node_path.length; i++) {
+                    if (i == node_path.length - 1) {
+                        adjacent_node_path.push(node_path[i] + 1);
+                    } else {
+                        adjacent_node_path.push(node_path[i]);
+                    }
+                    adjacent_node = adjacent_node[Object.keys(adjacent_node).sort()[adjacent_node_path[i]]];
+                    if (adjacent_node == undefined) {
+                        break;
+                    }
+                }
+                if (adjacent_node != undefined) {
+                    unexplored.push(adjacent_node_path);
+                }
+            }
+
+            // Keep going deeper if possible
+            if (node instanceof Array) {
+                node = undefined;
+            } else {
+                node_path.push(0);
+                node = node[Object.keys(node).sort()[0]];
+            }
+        }
+    }
+}
+
+function start_retrieving_char_selection() {
+    var xmlhttp = new XMLHttpRequest();
+
+    xmlhttp.addEventListener("loadend", function() {
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+            display_char_selection(JSON.parse(xmlhttp.responseText));
+        } else {
+            console.log(xmlhttp);
+            document.getElementById("status").innerHTML="Error retrieving char selection: " + xmlhttp.status.toString() + " - " + xmlhttp.statusText.toString();
+        }
+    });
+    xmlhttp.open("GET", "char_selection.json", true);
     xmlhttp.send();
 }
 
@@ -98,14 +265,15 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
     });
+    get_visualmandarin_index();
+    start_retrieving_char_selection();
 });
-
-get_visualmandarin_index();
 </script>
 </head>
 <body>
 <div id="status">Loading...</div>
 <input id="character_input" type="text" placeholder="Input 汉字 here" disabled="disabled"></input>
+<ol id="char_selector"></ol>
 <div id="diagrams"></div>
 </body>
 </html>
