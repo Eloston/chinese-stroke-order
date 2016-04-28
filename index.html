@@ -8,9 +8,6 @@
         font-size: 2em;
         margin-bottom: 0.25em;
     }
-    #char_selector {
-        font-size: 2em;
-    }
     #status {
         padding-top: 0;
         padding-bottom: 0.5em;
@@ -44,6 +41,11 @@
         display: inline-block;
         margin: 0 1em 0 0;
     }
+    #char_selector {
+        font-size: 2em;
+        align-items: flex-start;
+        justify-content: flex-start;
+    }
     li > label {
         display: flex;
         background-color: #666;
@@ -57,6 +59,10 @@
     li {
         margin: 0 0 0 1em;
         padding: 0.5em 0 0 0;
+    }
+    #char_selector > li {
+        margin: 0 0 0 0;
+        padding: 0 0 0 0;
     }
     ol {
         display: flex;
@@ -154,7 +160,6 @@ function display_char_selection(char_selection) {
             for (i = 0; i < node_path.length; i++) {
                 node = node[Object.keys(node).sort()[node_path[i]]];
             }
-            current_elem = current_elem.parentElement.parentElement;
         } else {
             // Add HTML elements for current node
             var current_node = char_selection;
@@ -163,7 +168,22 @@ function display_char_selection(char_selection) {
                 node_label = Object.keys(current_node).sort()[node_path[i]];
                 current_node = current_node[node_label];
             }
-            // add element with node_label
+            if (node_path.length > 0) {
+                current_elem = char_selector_elem.children[0].children[2];
+            }
+            console.log("node_label: " + node_label);
+            console.log(node_path);
+            for (i = 0; i < node_path.length; i++) {
+                /*console.log("DERP");
+                console.log(current_elem);
+                console.log(node_path);
+                console.log(node_path[i]);
+                console.log(current_elem.children)
+                console.log(current_elem.children[node_path[i]]);*/
+                if (current_elem.children.length - 1 >= node_path[i]) {
+                    current_elem = current_elem.children[node_path[i]].children[2];
+                }
+            }
             var middle_li_elem = document.createElement("li");
             current_elem.appendChild(middle_li_elem);
             var middle_input_elem = document.createElement("input");
@@ -178,6 +198,7 @@ function display_char_selection(char_selection) {
             var middle_ol_elem = document.createElement("ol");
             middle_li_elem.appendChild(middle_ol_elem);
             current_elem = middle_ol_elem;
+            // add element with node_label
             if (node instanceof Array) {
                 for (i = 0; i < node.length; i++) {
                     var node_label = node[i];
@@ -273,7 +294,7 @@ document.addEventListener("DOMContentLoaded", function() {
 <body>
 <div id="status">Loading...</div>
 <input id="character_input" type="text" placeholder="Input 汉字 here" disabled="disabled"></input>
-<ol id="char_selector"></ol>
+<ol id="char_selector" class="diagramentry"></ol>
 <div id="diagrams"></div>
 </body>
 </html>
